@@ -25,7 +25,6 @@
 #define STACK_FRAME_SIZE			8
 #define STACK_LR_OFFSET				2
 #define STACK_PSR_OFFSET			1
-#define STACK_PC_OFFSET				0 /*TODO*/
 #define STACK_PSR_DEFAULT			0x01000000
 
 /**********************************************************************************/
@@ -97,9 +96,6 @@ void rtos_start_scheduler(void)
 {
 #ifdef RTOS_ENABLE_IS_ALIVE
 	init_is_alive();
-	task_list.global_tick = ZERO;
-	rtos_create_task(idle_task,ZERO,kAutoStart);
-	//task_list.current_task = ;
 #endif
 	SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk
 	        | SysTick_CTRL_ENABLE_Msk;
@@ -111,46 +107,17 @@ void rtos_start_scheduler(void)
 rtos_task_handle_t rtos_create_task(void (*task_body)(), uint8_t priority,
 		rtos_autostart_e autostart)
 {
-	rtos_task_handle_t retval;
-	if (RTOS_MAX_NUMBER_OF_TASKS > task_list.nTasks)/*If aun hay espacio*/
-	{
-		task_list.tasks[task_list.nTasks].priority = priority;
-		task_list.tasks[task_list.nTasks].local_tick = ZERO;
-		task_list.tasks[task_list.nTasks].task_body = task_body;
-		task_list.tasks[task_list.nTasks].sp = &(task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_FRAME_SIZE - ONE]);
-		if(kStartSuspended == autostart)
-		{
-			task_list.tasks[task_list.nTasks].state = S_SUSPENDED;
-		}
-		else
-		{
-			task_list.tasks[task_list.nTasks].state = S_READY;
-		}
-		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_PC_OFFSET] = (uint32_t)task_body;
-		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_PSR_OFFSET] = STACK_PSR_DEFAULT;
-		retval = task_list.nTasks;
-		task_list.nTasks++;
-	}
-	else
-	{
-		retval = RTOS_INVALID_TASK;
-	}
 
-	return retval;
 }
 
 rtos_tick_t rtos_get_clock(void)
 {
-	uint32_t clk;
-	clk = task_list.global_tick;
-	return clk;
+	return 0;
 }
 
 void rtos_delay(rtos_tick_t ticks)
 {
-	task_list.tasks[task_list.current_task].state = S_WAITING;
-	task_list.tasks[task_list.current_task].local_tick = ticks;
-	dispatcher(kFromNormalExec);
+
 }
 
 void rtos_suspend_task(void)
@@ -161,7 +128,8 @@ void rtos_suspend_task(void)
 
 void rtos_activate_task(rtos_task_handle_t task)
 {
-
+	task_list.tasks[task_list.current_task].state = S_READY;
+	dispatcher(kFromNormalExec);
 }
 
 /**********************************************************************************/
@@ -177,17 +145,44 @@ static void reload_systick(void)
 
 static void dispatcher(task_switch_type_e type)
 {
+	uint8_t index;
+	for(index = 0; index < task_list.nTasks; index++){
+		if(/*task_list.tas &&*/ (task_list.tasks[task_list.current_task].state == S_READY || task_list.tasks[task_list.current_task].state == S_RUNNING ))
+		{
 
+		}
+	}
 }
 
 FORCE_INLINE static void context_switch(task_switch_type_e type)
 {
+	static uint8_t first = 1;
+	if(!first)
+	{
+
+	}
+	else
+	{
+		first = 0;
+	}
+	task_list.current_task = task_list.next_task;
 
 }
 
 static void activate_waiting_tasks()
 {
+	uint8_t index;
+	for(index = 0; index <task_list.tasks; index++)
+	{
+		if(task_list.tasks[task_list.current_task].state == S_WAITING)
+		{
 
+		}
+		else
+		{
+
+		}
+	}
 }
 
 /**********************************************************************************/

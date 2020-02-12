@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+ 
 /**
  * @file    miniRtosLab.c
  * @brief   Application entry point.
@@ -37,7 +37,7 @@
 #include "peripherals.h"
 #include "pin_mux.h"
 #include "clock_config.h"
-#include "MK64F12.h"
+#include "MK66F18.h"
 #include "fsl_debug_console.h"
 /* TODO: insert other include files here. */
 #include "rtos.h"
@@ -100,5 +100,3 @@ int main(void) {
 		__asm("NOP");
 	}
 }
-
-
