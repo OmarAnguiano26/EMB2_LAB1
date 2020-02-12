@@ -141,7 +141,9 @@ rtos_task_handle_t rtos_create_task(void (*task_body)(), uint8_t priority,
 
 rtos_tick_t rtos_get_clock(void)
 {
-	return 0;
+	uint32_t clk;
+	clk = task_list.global_tick;
+	return clk;
 }
 
 void rtos_delay(rtos_tick_t ticks)
