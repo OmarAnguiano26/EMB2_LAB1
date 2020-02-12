@@ -161,7 +161,8 @@ void rtos_suspend_task(void)
 
 void rtos_activate_task(rtos_task_handle_t task)
 {
-
+	task_list.tasks[task_list.current_task].state = S_READY;
+	dispatcher(kFromNormalExec);
 }
 
 /**********************************************************************************/
