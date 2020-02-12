@@ -148,12 +148,15 @@ rtos_tick_t rtos_get_clock(void)
 
 void rtos_delay(rtos_tick_t ticks)
 {
-
+	task_list.tasks[task_list.current_task].state = S_WAITING;
+	task_list.tasks[task_list.current_task].local_tick = ticks;
+	dispatcher(kFromNormalExec);
 }
 
 void rtos_suspend_task(void)
 {
-
+	task_list.tasks[task_list.current_task].state = S_SUSPENDED;
+	dispatcher(kFromNormalExec);
 }
 
 void rtos_activate_task(rtos_task_handle_t task)
