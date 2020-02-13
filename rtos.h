@@ -13,7 +13,7 @@
 
 #include "rtos_config.h"
 #include "stdint.h"
-#define RTOS_INVALID_TASK	(0U)/*TODO*/
+#define RTOS_INVALID_TASK	(-1)
 #define ZERO 				(0U)
 #define ONE 				(1U)
 #define TWO 				(2U)
