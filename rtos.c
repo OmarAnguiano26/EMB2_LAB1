@@ -201,12 +201,42 @@ static void dispatcher(task_switch_type_e type)
 
 FORCE_INLINE static void context_switch(task_switch_type_e type)
 {
-
+	static uint8_t first = TRUE;
+	register uint32_t *sp asm("sp");
+	if(!first)
+	{
+		if(type)
+		{
+			task_list.tasks[task_list.current_task].sp = sp - STACK_POINTER_SET;
+		}
+		else
+		{
+			task_list.tasks[task_list.current_task].sp = sp + STACK_POINTER_SET;
+		}
+	}
+	else
+	{
+		first = ZERO;
+	}
+	task_list.current_task = task_list.next_task;
+	task_list.tasks[task_list.current_task].state = S_RUNNING;
+	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
 static void activate_waiting_tasks()
 {
-
+	uint8_t in;
+	for(in = 0; in < task_list.nTasks; in++)
+	{
+		if(S_WAITING == task_list.tasks[in].state)
+		{
+			task_list.tasks[in].local_tick--;
+			if(ZERO == task_list.tasks[in].local_tick)
+			{
+				task_list.tasks[in].state = S_READY;
+			}
+		}
+	}
 }
 
 /**********************************************************************************/
