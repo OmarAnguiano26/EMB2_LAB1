@@ -88,7 +88,7 @@ int main(void) {
   	/* Init FSL debug console. */
     BOARD_InitDebugConsole();
 
-    PRINTF("Hello World\n");
+    PRINTF("Hello World\r\n");
 
 	rtos_create_task(dummy_task1, 1, kAutoStart);
 	rtos_create_task(dummy_task2, 2, kAutoStart);

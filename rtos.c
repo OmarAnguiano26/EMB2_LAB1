@@ -25,7 +25,7 @@
 #define STACK_FRAME_SIZE			8
 #define STACK_LR_OFFSET				2
 #define STACK_PSR_OFFSET			1
-#define STACK_PC_OFFSET				0 /*TODO Agregar el valor correcto*/
+#define STACK_PC_OFFSET				2 /*TODO Agregar el valor correcto*/
 #define STACK_PSR_DEFAULT			0x01000000
 #define MIN_PRIOR					-1
 

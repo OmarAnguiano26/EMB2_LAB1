@@ -16,7 +16,7 @@
 #define RTOS_TIC_PERIOD_IN_US 		(1000)
 
 /*! @brief Stack size for each task */
-#define RTOS_STACK_SIZE				(100)
+#define RTOS_STACK_SIZE				(1000)
 
 /*! @brief Max number of tasks for runtime */
 #define RTOS_MAX_NUMBER_OF_TASKS	(10)
