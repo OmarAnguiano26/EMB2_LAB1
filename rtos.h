@@ -16,6 +16,8 @@
 #define RTOS_INVALID_TASK	(-1)
 #define ZERO 				(0U)
 #define TRUE				(1U)
+#define ONE					(1U)
+#define STACK_POINTER_SET	(9U)
 
 
 /*! @brief Autostart state type */

@@ -184,7 +184,7 @@ static void dispatcher(task_switch_type_e type)
 	for(i = 0; i < task_list.nTasks; i++) /*Cada tarea*/
 	{
 		if( (high < task_list.tasks[i].priority) && (S_READY == task_list.tasks[i].state
-			 || S_RUNNING == task_list.task[i].state) )
+			 || S_RUNNING == task_list.tasks[i].state) )
 		{
 			high = task_list.tasks[i].priority;
 			next_task = i;
@@ -221,6 +221,7 @@ FORCE_INLINE static void context_switch(task_switch_type_e type)
 	task_list.current_task = task_list.next_task;
 	task_list.tasks[task_list.current_task].state = S_RUNNING;
 	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+
 }
 
 static void activate_waiting_tasks()
@@ -257,15 +258,21 @@ static void idle_task(void)
 
 void SysTick_Handler(void)
 {
+	task_list.global_tick++;
 #ifdef RTOS_ENABLE_IS_ALIVE
 	refresh_is_alive();
 #endif
 	activate_waiting_tasks();
 	reload_systick();
+	dispatcher(kFromISR);
 }
 
 void PendSV_Handler(void)
 {
+	register uint32_t r0 asm("r0");
+	SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
+	r0 = task_list.tasks[task_list.current_task].sp;
+	asm("mov r7, r0");
 
 }
 
