@@ -1,3 +1,5 @@
+/*
+
 /**
  * @file rtos.c
  * @author ITESO
@@ -271,7 +273,7 @@ void PendSV_Handler(void)
 	register uint32_t *r0 asm("r0");
 	SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
 	r0 = task_list.tasks[task_list.current_task].sp;
-	asm("mov r7, r0");
+	asm("mov r10, r0");
 
 }
 
@@ -315,4 +317,4 @@ static void refresh_is_alive(void)
 	}
 }
 #endif
-///
+///*/
