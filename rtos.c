@@ -98,12 +98,12 @@ void rtos_start_scheduler(void)
 {
 #ifdef RTOS_ENABLE_IS_ALIVE
 	init_is_alive();
-	task_list.global_tick = ZERO;
-	rtos_create_task(idle_task,ZERO,kAutoStart);
 #endif
 	SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk
 	        		| SysTick_CTRL_ENABLE_Msk;
 	reload_systick();
+	task_list.global_tick = ZERO;
+		rtos_create_task(idle_task,ZERO,kAutoStart);
 	for (;;)
 		;
 }
@@ -126,10 +126,11 @@ rtos_task_handle_t rtos_create_task(void (*task_body)(), uint8_t priority,
 		task_list.tasks[task_list.nTasks].local_tick = ZERO;
 		task_list.tasks[task_list.nTasks].task_body = task_body;
 		task_list.tasks[task_list.nTasks].sp = &(task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_FRAME_SIZE - ONE]);
-		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_PC_OFFSET] = (uint32_t)task_body;
+		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_LR_OFFSET] = (uint32_t)task_body;
 		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_PSR_OFFSET] = STACK_PSR_DEFAULT;
-		retval = task_list.nTasks;
 		task_list.nTasks++;
+		retval = task_list.nTasks;
+
 	}
 	else
 	{
@@ -178,7 +179,7 @@ static void reload_systick(void)
 
 static void dispatcher(task_switch_type_e type)
 {
-	rtos_task_handle_t next_task;//Siguiente tarea en idle
+	rtos_task_handle_t next_task = task_list.nTasks;//Siguiente tarea en idle
 	int8_t high = MIN_PRIOR;
 	uint8_t i;
 	for(i = 0; i < task_list.nTasks; i++) /*Cada tarea*/
@@ -189,12 +190,13 @@ static void dispatcher(task_switch_type_e type)
 			high = task_list.tasks[i].priority;
 			next_task = i;
 		}
+	}
 		task_list.next_task = next_task;
 		if(task_list.current_task != next_task)
 		{
 			context_switch(type);
 		}
-	}
+
 
 
 }
@@ -202,7 +204,7 @@ static void dispatcher(task_switch_type_e type)
 FORCE_INLINE static void context_switch(task_switch_type_e type)
 {
 	static uint8_t first = TRUE;
-	register uint32_t *sp asm("sp");
+	register uint32_t sp asm("sp");
 	if(!first)
 	{
 		if(type)
