@@ -25,7 +25,9 @@
 #define STACK_FRAME_SIZE			8
 #define STACK_LR_OFFSET				2
 #define STACK_PSR_OFFSET			1
+#define STACK_PC_OFFSET				0 /*TODO Agregar el valor correcto*/
 #define STACK_PSR_DEFAULT			0x01000000
+#define MIN_PRIOR					-1
 
 /**********************************************************************************/
 // IS ALIVE definitions
@@ -96,9 +98,11 @@ void rtos_start_scheduler(void)
 {
 #ifdef RTOS_ENABLE_IS_ALIVE
 	init_is_alive();
+	task_list.global_tick = ZERO;
+	rtos_create_task(idle_task,ZERO,kAutoStart);
 #endif
 	SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk
-	        | SysTick_CTRL_ENABLE_Msk;
+	        		| SysTick_CTRL_ENABLE_Msk;
 	reload_systick();
 	for (;;)
 		;
@@ -107,17 +111,46 @@ void rtos_start_scheduler(void)
 rtos_task_handle_t rtos_create_task(void (*task_body)(), uint8_t priority,
 		rtos_autostart_e autostart)
 {
+	rtos_task_handle_t retval;
+	if (RTOS_MAX_NUMBER_OF_TASKS > task_list.nTasks)/*If aun hay espacio*/
+	{
+		if(kStartSuspended == autostart)
+		{
+			task_list.tasks[task_list.nTasks].state = S_SUSPENDED;
+		}
+		else
+		{
+			task_list.tasks[task_list.nTasks].state = S_READY;
+		}
+		task_list.tasks[task_list.nTasks].priority = priority;
+		task_list.tasks[task_list.nTasks].local_tick = ZERO;
+		task_list.tasks[task_list.nTasks].task_body = task_body;
+		task_list.tasks[task_list.nTasks].sp = &(task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_FRAME_SIZE - ONE]);
+		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_PC_OFFSET] = (uint32_t)task_body;
+		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_PSR_OFFSET] = STACK_PSR_DEFAULT;
+		retval = task_list.nTasks;
+		task_list.nTasks++;
+	}
+	else
+	{
+		retval = RTOS_INVALID_TASK;
+	}
 
+	return retval;
 }
 
 rtos_tick_t rtos_get_clock(void)
 {
-	return 0;
+	uint32_t clk;
+	clk = task_list.global_tick;
+	return clk;
 }
 
 void rtos_delay(rtos_tick_t ticks)
 {
-
+	task_list.tasks[task_list.current_task].state = S_WAITING;
+	task_list.tasks[task_list.current_task].local_tick = ticks;
+	dispatcher(kFromNormalExec);
 }
 
 void rtos_suspend_task(void)
@@ -145,42 +178,63 @@ static void reload_systick(void)
 
 static void dispatcher(task_switch_type_e type)
 {
-	uint8_t index;
-	for(index = 0; index < task_list.nTasks; index++){
-		if(/*task_list.tas &&*/ (task_list.tasks[task_list.current_task].state == S_READY || task_list.tasks[task_list.current_task].state == S_RUNNING ))
+	rtos_task_handle_t next_task = RTOS_INVALID_TASK;//Siguiente tarea en idle
+	int8_t high = MIN_PRIOR;
+	uint8_t i;
+	for(i = 0; i < task_list.nTasks; i++) /*Cada tarea*/
+	{
+		if( (high < task_list.tasks[i].priority) && (S_READY == task_list.tasks[i].state
+			 || S_RUNNING == task_list.tasks[i].state) )
 		{
-
+			next_task = i;
+			high = task_list.tasks[i].priority;
+		}
+		if(task_list.current_task != next_task)
+		{
+			task_list.next_task = next_task;
+			context_switch(type);
 		}
 	}
+
+
 }
 
 FORCE_INLINE static void context_switch(task_switch_type_e type)
 {
-	static uint8_t first = 1;
+	static uint8_t first = TRUE;
+	register uint32_t *sp asm("sp");
 	if(!first)
 	{
-
+		if(type)
+		{
+			task_list.tasks[task_list.current_task].sp = sp - STACK_POINTER_SET;
+		}
+		else
+		{
+			task_list.tasks[task_list.current_task].sp = sp + STACK_POINTER_SET;
+		}
 	}
 	else
 	{
-		first = 0;
+		first = ZERO;
 	}
 	task_list.current_task = task_list.next_task;
-
+	task_list.tasks[task_list.current_task].state = S_RUNNING;
+	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
 static void activate_waiting_tasks()
 {
-	uint8_t index;
-	for(index = 0; index <task_list.tasks; index++)
+	uint8_t in;
+	for(in = 0; in < task_list.nTasks; in++)
 	{
-		if(task_list.tasks[task_list.current_task].state == S_WAITING)
+		if(S_WAITING == task_list.tasks[in].state)
 		{
-
-		}
-		else
-		{
-
+			task_list.tasks[in].local_tick--;
+			if(ZERO == task_list.tasks[in].local_tick)
+			{
+				task_list.tasks[in].state = S_READY;
+			}
 		}
 	}
 }
@@ -206,12 +260,18 @@ void SysTick_Handler(void)
 #ifdef RTOS_ENABLE_IS_ALIVE
 	refresh_is_alive();
 #endif
+	task_list.global_tick++;
 	activate_waiting_tasks();
+	dispatcher(kFromISR);
 	reload_systick();
 }
 
 void PendSV_Handler(void)
 {
+	register uint32_t *r0 asm("r0");
+	SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
+	r0 = task_list.tasks[task_list.current_task].sp;
+	asm("mov r7, r0");
 
 }
 

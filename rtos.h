@@ -13,6 +13,12 @@
 
 #include "rtos_config.h"
 #include "stdint.h"
+#define RTOS_INVALID_TASK	(-1)
+#define ZERO 				(0U)
+#define TRUE				(1U)
+#define ONE					(1U)
+#define STACK_POINTER_SET 	(9u)
+
 
 /*! @brief Autostart state type */
 typedef enum
