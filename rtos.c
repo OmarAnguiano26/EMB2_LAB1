@@ -126,7 +126,7 @@ rtos_task_handle_t rtos_create_task(void (*task_body)(), uint8_t priority,
 		task_list.tasks[task_list.nTasks].local_tick = ZERO;
 		task_list.tasks[task_list.nTasks].task_body = task_body;
 		task_list.tasks[task_list.nTasks].sp = &(task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE -
-																					STACK_FRAME_SIZE - ONE]);
+																					STACK_FRAME_SIZE- ONE ]);
 		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_LR_OFFSET] = (uint32_t)task_body;
 		task_list.tasks[task_list.nTasks].stack[RTOS_STACK_SIZE - STACK_PSR_OFFSET] = STACK_PSR_DEFAULT;
 		task_list.nTasks++;
@@ -168,13 +168,6 @@ void rtos_activate_task(rtos_task_handle_t task)
 // Local methods implementation
 /**********************************************************************************/
 
-static void reload_systick(void)
-{
-	SysTick->LOAD = USEC_TO_COUNT(RTOS_TIC_PERIOD_IN_US,
-	        CLOCK_GetCoreSysClkFreq());
-	SysTick->VAL = 0;
-}
-
 static void dispatcher(task_switch_type_e type)
 {
 	rtos_task_handle_t next_task = task_list.nTasks;
@@ -196,20 +189,28 @@ static void dispatcher(task_switch_type_e type)
 		}
 }
 
+static void reload_systick(void)
+{
+	SysTick->LOAD = USEC_TO_COUNT(RTOS_TIC_PERIOD_IN_US,
+	        CLOCK_GetCoreSysClkFreq());
+	SysTick->VAL = 0;
+}
+
 FORCE_INLINE static void context_switch(task_switch_type_e type)
 {
 	static uint8_t first = TRUE;
-	register uint32_t *sp asm("sp");
+	register uint32_t r0 asm("r0");
 	if(!first)
 	{
-		asm("mov r0, r7"); /**todo */
+		asm("mov r0, r7");
+		task_list.tasks[task_list.current_task].sp = (uint32_t*) r0;
 		if(type)
-		{
-			task_list.tasks[task_list.current_task].sp = sp - STACK_POINTER_SET;
+		{/**Normal execution*/
+			task_list.tasks[task_list.current_task].sp = task_list.tasks[task_list.current_task].sp - 9;
 		}
 		else
-		{
-			task_list.tasks[task_list.current_task].sp = sp + STACK_POINTER_SET;
+		{/**From ISR*/
+			task_list.tasks[task_list.current_task].sp = task_list.tasks[task_list.current_task].sp + 9;
 		}
 	}
 	else
@@ -218,6 +219,7 @@ FORCE_INLINE static void context_switch(task_switch_type_e type)
 	}
 	task_list.current_task = task_list.next_task;
 	task_list.tasks[task_list.current_task].state = S_RUNNING;
+	//task_list.current_task = task_list.next_task;
 	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
@@ -267,6 +269,7 @@ void SysTick_Handler(void)
 void PendSV_Handler(void)
 {
 	register uint32_t r0 asm("r0");
+	(void)r0;
 	SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
 	r0 = (uint32_t)task_list.tasks[task_list.current_task].sp;
 	asm("mov r7, r0");
